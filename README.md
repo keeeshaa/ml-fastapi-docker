@@ -60,7 +60,8 @@ What is logged to the experiment `iris-classification`:
 |---|---|
 | Parameters | `C`, `max_iter`, `test_size` |
 | Metrics | `accuracy`, `f1_score` (macro) |
-| Artifacts | `model.joblib`, MLflow model (`model/`) |
+| Artifacts | `model.joblib` (run artifact) |
+| Logged model | `model` (MLflow sklearn model, linked to the run) |
 
 The model is registered in the Model Registry as **`iris-classifier`**. Each new run of `train.py` creates a new version (1, 2, 3, ...).
 
@@ -135,3 +136,31 @@ Response:
 ```json
 {"prediction": "setosa"}
 ```
+
+## Screenshots
+
+### Training with MLflow logging and registration
+![train](screenshots/1_train_mlflow.png)
+
+### MLflow experiment `iris-classification`
+![experiment](screenshots/2_mlflow_experiment.png)
+
+### Run details: metrics and registered model
+![run](screenshots/3_mlflow_run.png)
+![metrics charts](screenshots/3b_mlflow_metrics_charts.png)
+
+### Logged parameters
+![params](screenshots/4_mlflow_params.png)
+
+### Logged artifact
+![artifacts](screenshots/5_mlflow_artifacts.png)
+
+### Model Registry: `iris-classifier`, version 1
+![registry](screenshots/6_mlflow_registry.png)
+
+### Streamlit frontend
+![setosa](screenshots/7_streamlit_setosa.png)
+![virginica](screenshots/8_streamlit_virginica.png)
+
+### FastAPI receiving requests from Streamlit
+![terminals](screenshots/9_terminals.png)
