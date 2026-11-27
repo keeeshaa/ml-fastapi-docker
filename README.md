@@ -1,47 +1,115 @@
-# ML Model Deployment with FastAPI and Docker
+# Iris ML System: FastAPI + Docker + Streamlit + MLflow
 
-A simple Logistic Regression model trained on the Iris dataset and served as a REST API with FastAPI, packaged in Docker.
+A simple end-to-end ML system built on the Iris dataset:
+
+- **Model**: Logistic Regression (scikit-learn)
+- **Experiment tracking & Model Registry**: MLflow
+- **Backend API**: FastAPI, containerized with Docker
+- **Frontend**: Streamlit
+
+## Architecture
+
+```
+            train.py
+               │
+     ┌─────────┴──────────┐
+     ▼                    ▼
+model.joblib        MLflow (mlflow.db + mlruns/)
+     │               - params, metrics, artifacts
+     ▼               - Model Registry: iris-classifier v1
+FastAPI (main.py, Docker)
+     ▲
+     │  POST /predict (JSON)
+     │
+Streamlit UI (app.py)  ◄── user
+```
+
+1. `train.py` trains the model, logs parameters, metrics and artifacts to MLflow, registers the model in the MLflow Model Registry and saves `model.joblib`.
+2. `main.py` (FastAPI) loads `model.joblib` and serves predictions.
+3. `app.py` (Streamlit) gives the user a form, sends the input to the API and shows the result.
 
 ## Project structure
 
 ```
 ml-fastapi-docker/
-├── main.py           # FastAPI app
-├── train.py          # trains and saves the model
-├── model.joblib      # saved model
-├── requirements.txt  # Python dependencies
-├── Dockerfile        # container instructions
+├── train.py              # training + MLflow tracking and registration
+├── main.py               # FastAPI app
+├── app.py                # Streamlit frontend
+├── model.joblib          # saved model
+├── requirements.txt      # API dependencies (used in Docker)
+├── requirements-app.txt  # all dependencies (API + MLflow + Streamlit)
+├── Dockerfile            # container for the API
 └── README.md
 ```
 
-## 1. Train the model
+## 1. Install dependencies
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-app.txt
+```
+
+## 2. Train the model and log it to MLflow
+
+```bash
 python train.py
 ```
 
-This creates `model.joblib`.
+What is logged to the experiment `iris-classification`:
 
-## 2. Run the API locally
+| Type | Values |
+|---|---|
+| Parameters | `C`, `max_iter`, `test_size` |
+| Metrics | `accuracy`, `f1_score` (macro) |
+| Artifacts | `model.joblib`, MLflow model (`model/`) |
+
+The model is registered in the Model Registry as **`iris-classifier`**. Each new run of `train.py` creates a new version (1, 2, 3, ...).
+
+## 3. Open the MLflow UI
 
 ```bash
-uvicorn main:app --reload
+mlflow ui --backend-store-uri sqlite:///mlflow.db --port 5000
 ```
 
-- Root: http://127.0.0.1:8000/
-- Swagger docs: http://127.0.0.1:8000/docs
+Open http://localhost:5000:
 
-## 3. Build and run with Docker
+- **Experiments → iris-classification**: runs with parameters and metrics
+- **Models → iris-classifier**: registered model versions
+
+## 4. Run the API
+
+Locally:
+
+```bash
+uvicorn main:app --port 8000
+```
+
+Or with Docker:
 
 ```bash
 docker build -t ml-fastapi .
 docker run -p 8000:8000 ml-fastapi
 ```
 
-Then open http://localhost:8000/docs
+- Root: http://localhost:8000/
+- Swagger docs: http://localhost:8000/docs
 
-## Endpoints
+## 5. Run the Streamlit frontend
+
+In a second terminal (the API must be running):
+
+```bash
+streamlit run app.py
+```
+
+Open http://localhost:8501, enter the flower measurements and press **Predict**.
+
+If the API runs on another address, set it with the `API_URL` environment variable:
+
+```bash
+API_URL=http://my-api:8000 streamlit run app.py
+```
+
+## API endpoints
 
 **GET /**
 
@@ -66,12 +134,4 @@ Response:
 
 ```json
 {"prediction": "setosa"}
-```
-
-Example with curl:
-
-```bash
-curl -X POST http://localhost:8000/predict \
-  -H "Content-Type: application/json" \
-  -d '{"sepal_length": 5.1, "sepal_width": 3.5, "petal_length": 1.4, "petal_width": 0.2}'
 ```
